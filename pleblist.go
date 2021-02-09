@@ -22,6 +22,10 @@ func pleblist(bind string, mc mediaController) {
 	// TODO: can we add a call to fetch the current playlist?
 	// TODO: remove a specific track?
 
+	r.HandleFunc("/", func(wr http.ResponseWriter, req *http.Request) {
+		http.ServeFile(wr, req, "mgr.html")
+	})
+
 	r.HandleFunc("/pleblist/clear", func(wr http.ResponseWriter, req *http.Request) {
 	})
 
