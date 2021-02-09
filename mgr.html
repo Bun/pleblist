@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { background: #18181b; color: white; }
+button, input { margin: 24px; border: 1px solid black;
+background: black; color: white; padding: 4px;
+font-size: 14pt; width: 30em; }
+</style>
+</head>
+<body>
+
+<p><input id="url" type="text" placeholder="URL">
+<p><button id="skip">SKIP</button>
+
+<script>
+const pleblist = 'http://127.0.0.1:2044/';
+const $input = document.getElementById('url');
+const $skip = document.getElementById('skip');
+
+$input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        const url = $input.value;
+        fetch(pleblist + 'pleblist/add', {
+            method: 'POST',
+            body: JSON.stringify({url: url})
+        }).then(v => console.log(`Added ${v}`)).catch(v => console.warn(`Failed: ${v}`));
+        console.log('url:', url);
+        $input.value = '';
+    }
+});
+
+$skip.addEventListener('click', function(e) {
+    fetch(pleblist + 'pleblist/skip', {
+        method: 'POST',
+        body: JSON.stringify({url: url})
+    }).then(v => console.log(`Skipped ${v}`)).catch(v => console.warn(`Failed to skip: ${v}`));
+});
+
+$input.focus();
+</script>
