@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"log"
 	"net/http"
 )
@@ -9,6 +10,13 @@ import (
 type mediaController interface {
 	QueueTrack(url string)
 	SkipCurrent()
+	Playlist() []playlistItem
+}
+
+type playlistItem struct {
+	ID    string `json:"id,omitempty"`
+	URL   string `json:"url"`
+	Title string `json:"title,omitempty"`
 }
 
 type pleblistItem struct {
@@ -26,6 +34,13 @@ func pleblist(bind string, mc mediaController) {
 		http.ServeFile(wr, req, "mgr.html")
 	})
 
+	r.HandleFunc("/pleblist", func(wr http.ResponseWriter, req *http.Request) {
+		respondJSON(wr, mc.Playlist())
+	})
+
+	r.HandleFunc("/pleblist/current", func(wr http.ResponseWriter, req *http.Request) {
+	})
+
 	r.HandleFunc("/pleblist/clear", func(wr http.ResponseWriter, req *http.Request) {
 	})
 
@@ -33,21 +48,16 @@ func pleblist(bind string, mc mediaController) {
 	})
 
 	r.HandleFunc("/pleblist/skip", func(wr http.ResponseWriter, req *http.Request) {
-		if req.Method != "POST" {
-			wr.WriteHeader(400)
+		if !decodePOST(wr, req, nil) {
+			// TODO: maybe arg to ensure we're skipping the right track
 			return
 		}
 		mc.SkipCurrent()
 	})
 
 	r.HandleFunc("/pleblist/add", func(wr http.ResponseWriter, req *http.Request) {
-		if req.Method != "POST" {
-			wr.WriteHeader(400)
-			return
-		}
 		var item pleblistItem
-		if err := json.NewDecoder(req.Body).Decode(&item); err != nil {
-			wr.WriteHeader(400)
+		if !decodePOST(wr, req, &item) {
 			return
 		}
 		mc.QueueTrack(item.URL)
@@ -63,7 +73,30 @@ func pleblist(bind string, mc mediaController) {
 }
 
 func main() {
+	bind := flag.String("bind", "127.0.0.1:2044", "Listen address for control server")
+	flag.Parse()
+
 	controller := newMPVController()
 	go controller.Background()
-	pleblist("127.0.0.1:2044", controller)
+	pleblist(*bind, controller)
+}
+
+func decodePOST(wr http.ResponseWriter, req *http.Request, obj interface{}) bool {
+	if req.Method != "POST" {
+		wr.WriteHeader(400)
+		return false
+	}
+	if obj != nil {
+		if err := json.NewDecoder(req.Body).Decode(&obj); err != nil {
+			wr.WriteHeader(400)
+			return false
+		}
+	}
+	return true
+}
+
+func respondJSON(wr http.ResponseWriter, obj interface{}) {
+	wr.Header().Set("Content-Type", "application/json")
+	e := json.NewEncoder(wr)
+	e.Encode(obj)
 }
